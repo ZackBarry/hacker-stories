@@ -1,5 +1,9 @@
 import React from 'react';
 
+import axios from 'axios';
+
+const API_ENDPOINT = 'https://hn.algolia.com/api/v1/search?query=';
+
 const useSemiPersistentState = (key, initialState) => {
   const [value, setValue] = React.useState(
     localStorage.getItem(key) || initialState
@@ -15,75 +19,84 @@ const useSemiPersistentState = (key, initialState) => {
 
 const storiesReducer = (state, action) => {
   console.log(state);
-  
+
   switch (action.type) {
-    case 'SET_STORIES':
-      return action.payload;
+    case 'STORIES_FETCH_INIT':
+      return {
+        ...state,
+        data: [],
+        isLoading: true,
+        isError: false,
+      };
+    case 'STORIES_FETCH_SUCCESS':
+      return {
+        ...state,
+        data: action.payload,
+        isLoading: false,
+        isError: false,
+      };
     case 'REMOVE_STORY':
-      return state.filter(
+      let filtered = state.data.filter(
         story => action.payload.objectID !== story.objectID
       );
+      return {
+        ...state,
+        data: filtered,
+        isLoading: false,
+        isError: false,
+      };
+    case 'STORIES_FETCH_FAILURE':
+      console.log(action.payload);
+      return {
+        ...state,
+        data: [],
+        isLoading: false,
+        isError: true,
+      }
     default:
       throw new Error(`Action type not supported: ${action.type}`);
   }
-
 };
 
 const App = () => {
   const [searchTerm, setSearchTerm] = useSemiPersistentState('search', 'React');
 
-  const handleSearch = event => setSearchTerm(event.target.value);
+  const [url, setUrl] = React.useState(`${API_ENDPOINT}${searchTerm}`);
 
-  const initialStories = [
-    {
-      title: 'React',
-      url: 'https://reactjs.org/',
-      author: 'Jordan Walke',
-      num_comments: 3,
-      points: 4,
-      objectID: 0,
-    },
-    {
-      title: 'Redux',
-      url: 'https://redux.js.org/',
-      author: 'Dan Abramov, Andrew Clark',
-      num_comments: 2,
-      points: 5,
-      objectID: 1,
-    },
-  ];
-
-  const getAsyncStories = () =>
-    new Promise(resolve => 
-      setTimeout(
-        () => resolve({ data: { stories: initialStories } }),
-        2000
-      )
-    );
+  const handleSearch = event => {
+    console.log(event);
+    setSearchTerm(event.target.value);
+  }
 
   const [stories, dispatchStories] = React.useReducer(
     storiesReducer,
-    []
+    { 'data': [], isLoading: false, isError: false }
   );
 
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [isError, setIsError] = React.useState(false);
+  const handleFetchStories = React.useCallback(async () => {
+    console.log(url);
+    
+    dispatchStories({ type: 'STORIES_FETCH_INIT' });
+
+    try {
+      let response = await axios.get(url);
+
+      dispatchStories({
+        type: 'STORIES_FETCH_SUCCESS',
+        payload: response.data.hits,
+      });
+    } catch (err) {
+      dispatchStories({
+        type: 'STORIES_FETCH_FAILURE',
+        payload: err,
+      });
+    }
+  }, [url]);
 
   React.useEffect(() => {
-    getAsyncStories()
-      .then(result => {
-        dispatchStories({
-            type: 'SET_STORIES',
-            payload: result.data.stories,
-        });
-        setIsLoading(false);
-      })
-      .catch(err => {
-        console.log(err);
-        setIsError(true);
-      });
-  }, []);
-
+    handleFetchStories()
+  }, [handleFetchStories]);
+  
   const handleRemoveStory = item => {
     dispatchStories({
         type: 'REMOVE_STORY',
@@ -91,24 +104,26 @@ const App = () => {
     });
   }
 
-  const searchedStories = stories.filter(s =>
-    s.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const searchedStories = stories.data;
+
+  const handleSearchSubmit = event => {
+    setUrl(`${API_ENDPOINT}${searchTerm}`);
+
+    event.preventDefault();
+  };
 
   return (
     <div>
       <h1>"My Hacker Stories"</h1>
 
-      <InputWithLabel 
-        id="hacker-stories-main-search"
-        value={searchTerm} 
-        isFocused
-        onInputChange={handleSearch}
-      >
-        <strong>Search:</strong>
-      </InputWithLabel>
-      { isError && <p>Error</p> }
-      { isLoading ? (
+      <SearchForm
+        handleSearchSubmit={handleSearchSubmit}
+        searchTerm={searchTerm}
+        handleSearch={handleSearch}
+      />
+
+      { stories.isError && <p>Error</p> }
+      { stories.isLoading ? (
         <p>Loading</p>
       ) : (
         <List list={searchedStories} onRemoveItem={handleRemoveStory} /> 
@@ -117,6 +132,26 @@ const App = () => {
   )
 }
 
+const SearchForm = ({
+  handleSearchSubmit,
+  searchTerm,
+  handleSearch,
+}) => (
+  <form onSubmit={handleSearchSubmit}>
+
+    <InputWithLabel 
+      id="hacker-stories-main-search"
+      value={searchTerm} 
+      isFocused
+      onInputChange={handleSearch}
+      searchTerm={searchTerm}
+    >
+      <strong>Search:</strong>
+    </InputWithLabel>
+
+  </form> 
+)
+
 const InputWithLabel = ({ 
   id, 
   type = 'text',
@@ -124,6 +159,7 @@ const InputWithLabel = ({
   onInputChange, 
   isFocused,
   children,
+  searchTerm,
 }) => {
   const inputRef = React.useRef();
 
@@ -143,6 +179,9 @@ const InputWithLabel = ({
         value={value} 
         onChange={onInputChange}
       />
+      <button type="submit" disabled={!searchTerm}>
+        Submit
+      </button>
       <hr/>
     </>
   )
