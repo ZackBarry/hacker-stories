@@ -125,14 +125,13 @@ const App = () => {
     { 'data': [], isLoading: false, isError: false }
   );
 
-  const searchedStories = stories.data;
+  const searchedStories = stories.data; 
 
   const handleFetchStories = React.useCallback(async () => {
     dispatchStories({ type: 'STORIES_FETCH_INIT' });
 
     try {
       let response = await axios.get(url);
-
       dispatchStories({
         type: 'STORIES_FETCH_SUCCESS',
         payload: response.data.hits,
@@ -149,12 +148,14 @@ const App = () => {
     handleFetchStories()
   }, [handleFetchStories]);
   
-  const handleRemoveStory = (item: Story) => {
+  const handleRemoveStory = React.useCallback((item: Story) => {
     dispatchStories({
         type: 'REMOVE_STORY',
         payload: item,
     });
-  }
+  }, [])
+
+  const MemoizedList = React.memo(List);
 
   return (
     <div className="container">
@@ -170,7 +171,7 @@ const App = () => {
       { stories.isLoading ? (
         <p>Loading</p>
       ) : (
-        <List list={searchedStories} onRemoveItem={handleRemoveStory} /> 
+        <MemoizedList list={searchedStories} onRemoveItem={handleRemoveStory} /> 
       ) }
     </div>
   )

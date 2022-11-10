@@ -42,7 +42,7 @@ const InputWithLabel = ({
             <button 
                 type="submit" 
                 disabled={!searchTerm} 
-                className="button button_large"
+                className="searchButton button_large"
             >
                 Submit
             </button>
