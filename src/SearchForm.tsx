@@ -5,7 +5,7 @@ import InputWithLabel from './InputWithLabel';
 type SearchFormProps = {
     searchTerm: string;
     onSearchInput: (event: React.ChangeEvent<HTMLInputElement>) => void;
-    onSearchSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+    onSearchSubmit: (term: string) => void;
 }
   
 const SearchForm = ({
@@ -13,7 +13,7 @@ const SearchForm = ({
     onSearchInput,
     onSearchSubmit,
 }: SearchFormProps) => (
-    <form onSubmit={onSearchSubmit} className="search-form">
+    <form onSubmit={() => onSearchSubmit(searchTerm)} className="search-form">
   
         <InputWithLabel 
             id="hacker-stories-main-search"

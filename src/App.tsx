@@ -4,6 +4,7 @@ import axios from 'axios';
 import { Story, Stories } from './types';
 import List from './List';
 import SearchForm from './SearchForm';
+import LastSearch from './LastSearch';
 
 import './App.css';
 
@@ -95,10 +96,18 @@ const storiesReducer = (
   }
 };
 
+export type UrlSearch = {
+  current: string,
+  history: Array<string>,
+}
+
 function useSearchBar() {
   const [searchTerm, setSearchTerm] = useSemiPersistentState('search', 'React');
 
-  const [url, setUrl] = React.useState(`${API_ENDPOINT}${searchTerm}`);
+  const [url, setUrl] = React.useState<UrlSearch>({
+    current: `${API_ENDPOINT}${searchTerm}`,
+    history: [],
+  });
 
   const onSearchInput = (
     event: React.ChangeEvent<HTMLInputElement>
@@ -107,11 +116,14 @@ function useSearchBar() {
   };
 
   const onSearchSubmit = (
-    event: React.FormEvent<HTMLFormElement>
+    term: string,
   ) => {
-    setUrl(`${API_ENDPOINT}${searchTerm}`);
+    let history = [url.current, ...url.history].slice(4);
 
-    event.preventDefault();
+    setUrl({
+      current: `${API_ENDPOINT}${term}`,
+      history,
+    });
   };
 
   return { searchTerm, url, onSearchInput, onSearchSubmit }
@@ -125,13 +137,14 @@ const App = () => {
     { 'data': [], isLoading: false, isError: false }
   );
 
-  const searchedStories = stories.data; 
+  const searchedStories = stories.data;
 
   const handleFetchStories = React.useCallback(async () => {
     dispatchStories({ type: 'STORIES_FETCH_INIT' });
 
     try {
-      let response = await axios.get(url);
+      let response = await axios.get(url.current);
+
       dispatchStories({
         type: 'STORIES_FETCH_SUCCESS',
         payload: response.data.hits,
@@ -148,15 +161,15 @@ const App = () => {
     handleFetchStories()
   }, [handleFetchStories]);
   
-  const handleRemoveStory = React.useCallback((item: Story) => {
+  const handleRemoveStory = (item: Story) => {
     dispatchStories({
         type: 'REMOVE_STORY',
         payload: item,
     });
-  }, [])
+  }
 
-  const MemoizedList = React.memo(List);
-
+  console.log(url);
+  
   return (
     <div className="container">
       <h1 className="headline-primary">"My Hacker Stories"</h1>
@@ -166,12 +179,16 @@ const App = () => {
         onSearchInput={onSearchInput}
         onSearchSubmit={onSearchSubmit}
       />
+      <LastSearch
+        url={url}
+        onSearchSubmit={onSearchSubmit}
+      />
 
       { stories.isError && <p>Error</p> }
       { stories.isLoading ? (
         <p>Loading</p>
       ) : (
-        <MemoizedList list={searchedStories} onRemoveItem={handleRemoveStory} /> 
+        <List list={searchedStories} onRemoveItem={handleRemoveStory} /> 
       ) }
     </div>
   )
