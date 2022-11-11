@@ -116,21 +116,33 @@ function useSearchBar() {
   };
 
   const onSearchSubmit = (
+    event: React.FormEvent<HTMLFormElement>,
     term: string,
   ) => {
-    let history = [url.current, ...url.history].slice(4);
+    event.preventDefault();
 
+    let history = [url.current, ...url.history].slice(0, 5);
+  
     setUrl({
       current: `${API_ENDPOINT}${term}`,
       history,
     });
   };
 
-  return { searchTerm, url, onSearchInput, onSearchSubmit }
+  const onSearchButtonSubmit = (
+    term: string,
+  ) => {
+    setUrl({
+      current: `${term}`,
+      history: url.history,
+    });
+  };
+
+  return { searchTerm, url, onSearchInput, onSearchSubmit, onSearchButtonSubmit }
 };
 
 const App = () => {
-  const { searchTerm, url, onSearchInput, onSearchSubmit } = useSearchBar();
+  const { searchTerm, url, onSearchInput, onSearchSubmit, onSearchButtonSubmit } = useSearchBar();
 
   const [stories, dispatchStories] = React.useReducer(
     storiesReducer,
@@ -181,7 +193,7 @@ const App = () => {
       />
       <LastSearch
         url={url}
-        onSearchSubmit={onSearchSubmit}
+        onSearchButtonSubmit={onSearchButtonSubmit}
       />
 
       { stories.isError && <p>Error</p> }

@@ -5,18 +5,18 @@ type LastSearchProps = {
         current: string,
         history: Array<string>,
     },
-    onSearchSubmit: (term: string) => void,
+    onSearchButtonSubmit: (term: string) => void,
 }
 
-const LastSearch = ({ url, onSearchSubmit }: LastSearchProps) => {
+const LastSearch = ({ url, onSearchButtonSubmit }: LastSearchProps) => {
     return (
         <>
             {url.history.map(old_url => (
                 <button
                     type='button'
-                    onClick={() => onSearchSubmit(old_url)}
+                    onClick={() => onSearchButtonSubmit(old_url)}
                 >
-                    {old_url} ONE TWO
+                    {old_url}
                 </button>
             ))};
         </>
